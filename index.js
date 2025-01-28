@@ -31,10 +31,21 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const HotelDB = client.db("hotel_quest");
+    const usersCollections =HotelDB.collection("usersCollections");
     const rooms_Collections =HotelDB.collection("rooms_collections");
+    const bookingCollection =HotelDB.collection("bookingCollection");
 
 
-
+app.post('/users',async(req,res)=>{
+  const body=req.body;
+  const result=await usersCollections.insertOne(body)
+  res.send(result)
+})
+app.get('/users',async(req,res)=>{
+  
+  const result=await usersCollections.find().toArray()
+  res.send(result)
+})
 
     app.get("/rooms",async (req,res)=>{
         const result=await rooms_Collections.find().toArray();
@@ -56,6 +67,67 @@ async function run() {
       const result = await bookingCollection.insertOne(bookingData)
       res.send(result);
   })
+    app.get('/bookings', async (req, res) => {
+      
+      const result = await bookingCollection.find().toArray()
+      res.send(result);
+  })
+  
+  app.get('/bookings/:id', async (req, res) => {
+    const roomId = req.params.id;
+    const query = { roomId };
+    try {
+        const bookings = await bookingCollection.find(query).toArray();
+        const bookedDates = bookings.map(booking => {
+            const start = new Date(booking.startDate);
+            const end = new Date(booking.endDate);
+
+            const dates = [];
+            while (start <= end) {
+                dates.push(new Date(start).toISOString().split('T')[0]);
+                start.setDate(start.getDate() + 1);
+            }
+            return dates;
+        }).flat(); 
+        res.send(bookedDates);
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to fetch booked dates.' });
+    }
+});
+
+
+app.get("/myBookings/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { bookedBy: email };
+  const cursor = bookingCollection.find(query);
+  const result = await cursor.toArray();
+  res.send(result);
+})
+      // app.get('/bookings/:id', async (req, res) => {
+      //   const query = { _id: new ObjectId(req.params.id) }; 
+
+      //   console.log(query);
+      //   try {
+      //       const bookings = await bookingCollection.find(query).toArray();
+      //       console.log(bookings);
+      //       const bookedDates = bookings.map(booking => {
+      //           const start = new Date(booking.bookingDate);
+      //           const end = new Date(booking.enddate);
+      
+      //           const dates = [];
+      //           while (start <= end) {
+      //               dates.push(new Date(start).toISOString().split('T')[0]);
+      //               start.setDate(start.getDate() + 1);
+      //           }
+      //           return dates;
+      //       }).flat(); // Flatten the array of date ranges
+      //       res.send(bookedDates); 
+            
+      //   } catch (error) {
+      //       res.send({ error: 'Failed to fetch booked dates.' }); 
+      //   }
+      // });
+      
 
 
 
